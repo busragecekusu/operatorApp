@@ -1,0 +1,171 @@
+import React, { useRef, useState, useEffect } from "react";
+import {
+  View,
+  TextInput,
+  Text,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import styles from "./codeFormStyles";
+import { Colors } from "@/constants/Colors";
+import CustomButton from "../customButton";
+import { useAppDispatch, useAppSelector } from "@/hooks/useReduxDispatch";
+import { setActiveComponent } from "@/redux/slices/activeComponentSlice";
+import Toast from "react-native-toast-message";
+import axiosInstance from "@/api/axiosInstance";
+import { useRouter } from "expo-router";
+import { setAuth } from "@/redux/slices/authSlice";
+
+const CODE_LENGTH = 4;
+
+type CodeFormProps = {
+  onNext?: (code: string) => void;
+  email?: string;
+};
+
+const CodeForm: React.FC<CodeFormProps> = ({ onNext, email }) => {
+  const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
+  const [isLoading, setIsLoading] = useState(false);
+  const inputRefs = useRef<(TextInput | null)[]>([]);
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const activeComponent = useAppSelector(
+    (state) => state.activeComponent.activeComponent
+  );
+  // Get email from Redux store as fallback
+  const storeEmail = useAppSelector((state) => state.auth.user?.email || "");
+  const registrationEmail = useAppSelector((state) => state.registration.email || "");
+  
+  // Priority: 1. Email passed from props, 2. Registration email from Redux, 3. User email from auth state
+  const userEmail = email || registrationEmail || storeEmail || "";
+  
+  useEffect(() => {
+    if (userEmail) {
+      console.log("Using email for verification:", userEmail);
+    } else {
+      console.warn("No email available for verification");
+    }
+  }, [userEmail]);
+
+  const handleChange = (text: string, index: number) => {
+    const newCode = [...code];
+    newCode[index] = text;
+    setCode(newCode);
+
+    if (text && index < CODE_LENGTH - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyPress = (e: any, index: number) => {
+    if (e.nativeEvent.key === "Backspace" && !code[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleNext = async () => {
+    const verificationCode = code.join("");
+    
+    if (verificationCode.length !== CODE_LENGTH) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid Code",
+        text2: `Please enter all ${CODE_LENGTH} digits`,
+      });
+      return;
+    }
+
+    if (!userEmail) {
+      Toast.show({
+        type: "error",
+        text1: "Missing Email",
+        text2: "Email information is required for verification",
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      console.log(`Sending verification data - Code: ${verificationCode}, Email: ${userEmail}`);
+      
+      // Send the complete verification code and proper email to API
+      const response = await axiosInstance.post("/auth/verify-email", {
+        email: userEmail,
+        code: verificationCode,
+      });
+      
+      console.log("Verification response:", response.data);
+      
+      Toast.show({
+        type: "success",
+        text1: "Code Verified",
+        text2: "Your email has been verified",
+      });
+
+      // After successful verification, create a temporary user
+      const tempUser = {
+        token: response.data.token || "temp-token",
+        user: {
+          id: response.data.userId || "temp-id",
+          email: userEmail,
+          username: response.data.username || userEmail.split('@')[0],
+          role: "user",
+          isActive: true,
+        },
+      };
+
+      // Set auth state with the user data
+      dispatch(setAuth(tempUser));
+      
+      // Navigate directly to profile page
+      setTimeout(() => {
+        router.replace("/profile");
+      }, 1000);
+      
+    } catch (error) {
+      console.error("Verification error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Verification Failed",
+        text2: "Please check your code and try again",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.container}
+    >
+      <View style={styles.codeContainer}>
+        {code.map((value, index) => (
+          <TextInput
+            key={index}
+            ref={(el) => (inputRefs.current[index] = el)}
+            style={styles.codeInput}
+            keyboardType="numeric"
+            maxLength={1}
+            value={value}
+            onChangeText={(text) => handleChange(text, index)}
+            onKeyPress={(e) => handleKeyPress(e, index)}
+          />
+        ))}
+      </View>
+
+      <CustomButton
+        title={"Verify"}
+        backgroundColor={Colors.light.primary}
+        borderWidth={2}
+        textColor={Colors.light.white}
+        onPress={handleNext}
+        fullWidth={true}
+        disabled={isLoading}
+      />
+    </KeyboardAvoidingView>
+  );
+};
+
+export default CodeForm;

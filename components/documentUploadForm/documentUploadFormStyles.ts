@@ -1,0 +1,70 @@
+import { StyleSheet } from "react-native";
+import { Colors } from "@/constants/Colors";
+
+export default StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    gap: 24,
+  },
+  backButton: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    zIndex: 10,
+    padding: 8,
+    backgroundColor: Colors.light.white,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: Colors.light.primary,
+    marginTop: 40,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: Colors.light.icon,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  documentContainer: {
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  documentTitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginBottom: 10,
+    color: Colors.light.text,
+  },
+  uploadButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
+    borderRadius: 8,
+    borderStyle: "dashed",
+    backgroundColor: Colors.light.background,
+  },
+  uploadText: {
+    marginLeft: 8,
+    color: Colors.light.primary,
+    fontSize: 14,
+  },
+});
